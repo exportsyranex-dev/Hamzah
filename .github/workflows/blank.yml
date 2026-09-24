@@ -1,0 +1,30 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: cmd
+        run: packaging\build_windows.bat
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExcelQuantityAssistant-Setup
+          path: dist/installer/ExcelQuantityAssistant-Setup.exe
