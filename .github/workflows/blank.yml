@@ -16,15 +16,43 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Extract project ZIP
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem -Path . -Filter *.zip -File | Select-Object -First 1
+          if (-not $zip) {
+            throw "No ZIP file found."
+          }
+
+          $extract = Join-Path $env:GITHUB_WORKSPACE "project"
+          Expand-Archive -Path $zip.FullName -DestinationPath $extract -Force
+
+          $folders = Get-ChildItem -Path $extract -Directory
+          if ($folders.Count -eq 1) {
+            $root = $folders[0].FullName
+          } else {
+            $root = $extract
+          }
+
+          "PROJECT_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
       - name: Build installer
         shell: cmd
-        run: packaging\build_windows.bat
+        run: |
+          cd /d "%PROJECT_ROOT%"
+          packaging\build_windows.bat
+
+      - name: Prepare installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\output" | Out-Null
+          Copy-Item "$env:PROJECT_ROOT\dist\installer\ExcelQuantityAssistant-Setup.exe" "$env:GITHUB_WORKSPACE\output\ExcelQuantityAssistant-Setup.exe"
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
           name: ExcelQuantityAssistant-Setup
-          path: dist/installer/ExcelQuantityAssistant-Setup.exe
+          path: output/ExcelQuantityAssistant-Setup.exe
